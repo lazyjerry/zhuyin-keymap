@@ -3,16 +3,14 @@ import {
   getKeyboard, invert, HANGUL_KEYS, HANGUL_COMPOUND, HANGUL_L, HANGUL_V, HANGUL_T,
   RUSSIAN_KEYS, GREEK_KEYS,
 } from "./keyboards.js";
-import { decodeLattice, pinyinWithMarks } from "./dict.js";
+import { decodeLattice, pinyinWithMarks, stripTone } from "./dict.js";
 
 export const TARGETS = {
   zhuyin: [
-    { id: "han", name: "中文" },
     { id: "bpmf", name: "注音符號" },
     { id: "pinyin", name: "漢語拼音" },
   ],
   pinyin: [
-    { id: "han", name: "中文" },
     { id: "bpmf", name: "注音符號" },
     { id: "pinyin", name: "漢語拼音" },
   ],
@@ -45,12 +43,13 @@ function zhuyinLattice(dict, keyboard, input, toneless, capsAsKeys) {
       const next = tokens[j + 1];
       if (next?.type === "tone") {
         const syl = body + next.sym;
-        if (dict.syllables.has(syl)) edges.push({ end: j + 2, syllables: [syl], src: src + next.ch });
+        if (dict.syllables.has(syl)) edges.push({ end: j + 2, syllables: [syl], toned: true, src: src + next.ch });
       } else if (toneless) {
-        edges.push({ end: j + 1, syllables: dict.toneVariants.get(body) ?? [body], src });
+        edges.push({ end: j + 1, syllables: dict.toneVariants.get(body) ?? [body], toned: false, src });
       } else if (dict.syllables.has(body)) {
+        // 沒有聲調鍵視為一聲（一聲的空白可省略）。
         const withSpace = next?.type === "space";
-        edges.push({ end: withSpace ? j + 2 : j + 1, syllables: [body], src: src + (withSpace ? " " : "") });
+        edges.push({ end: withSpace ? j + 2 : j + 1, syllables: [body], toned: true, src: src + (withSpace ? " " : "") });
       }
     }
     return edges;
@@ -76,9 +75,9 @@ function pinyinLattice(dict, input) {
       const digit = chars[j + 1];
       if (/[1-5]/.test(digit ?? "")) {
         const syl = byTone.get(Number(digit));
-        if (syl) edges.push({ end: j + 2, syllables: [syl], src: base + digit });
+        if (syl) edges.push({ end: j + 2, syllables: [syl], toned: true, src: base + digit });
       } else {
-        edges.push({ end: j + 1, syllables: [...byTone.values()], src: base });
+        edges.push({ end: j + 1, syllables: [...byTone.values()], toned: false, src: base });
       }
     }
     return edges;
@@ -91,12 +90,16 @@ function pinyinLattice(dict, input) {
   return { size: chars.length, lattice, literalAt };
 }
 
-function renderChinese(dict, segments, target, choices) {
-  return segments.map((seg, idx) => {
+// 輸出注音或拼音；按鍵沒有聲調資訊的音節不輸出聲調，避免把詞頻猜的聲調當成原文。
+function renderSyllables(dict, segments, target) {
+  const one = (syl, toned) => {
+    if (target === "bpmf") return toned ? syl : stripTone(syl);
+    const py = dict.pinyin.get(syl) ?? syl;
+    return toned ? pinyinWithMarks(py) : py.replace(/[1-5]$/, "").replace(/v/g, "ü");
+  };
+  return segments.map((seg) => {
     if (seg.kind === "literal") return seg.text;
-    if (target === "bpmf") return seg.syllables.join(" ") + " ";
-    if (target === "pinyin") return seg.syllables.map((s) => pinyinWithMarks(dict.pinyin.get(s) ?? s)).join(" ") + " ";
-    return choices.get(idx) ?? seg.text;
+    return seg.syllables.map((s, k) => one(s, seg.toned[k])).join(" ") + " ";
   }).join("").replace(/ +$/, "").replace(/ {2,}/g, " ");
 }
 
@@ -161,22 +164,23 @@ function decodeGreek(input) {
 }
 
 /**
- * @returns {{ output: string, segments: Array|null }}
- * segments 只有中文類鍵盤會提供，供使用者挑選同音候選字。
+ * @returns {{ output: string, segments: Array|null, invalid: number }}
+ * segments 只有注音、拼音會提供；invalid 是組不成音節而原樣輸出的按鍵數。
  * toneless：注音按鍵已移除聲調，沒有聲調鍵的音節以所有聲調比對。
  * capsAsKeys：注音按鍵含字首大寫，大寫英文字母視同小寫按鍵；關閉時大寫字母原樣保留。
  */
-export function decode(input, { keyboard, target, toneless = false, capsAsKeys = false, choices = new Map() }, dict) {
+export function decode(input, { keyboard, target, toneless = false, capsAsKeys = false }, dict) {
   const kb = getKeyboard(keyboard);
   if (kb.family === "zhuyin" || kb.family === "pinyin") {
-    if (!dict) return { output: "", segments: null, pending: true };
+    if (!dict) return { output: "", segments: null, invalid: 0, pending: true };
     const { size, lattice, literalAt } = kb.family === "zhuyin" ? zhuyinLattice(dict, kb, input, toneless, capsAsKeys) : pinyinLattice(dict, input);
     const segments = decodeLattice(dict, size, lattice, literalAt);
-    return { output: renderChinese(dict, segments, target, choices), segments };
+    const invalid = segments.filter((s) => s.invalid).length;
+    return { output: renderSyllables(dict, segments, target), segments, invalid };
   }
-  if (kb.family === "hangul") return { output: decodeHangul(input, target), segments: null };
-  if (kb.family === "greek") return { output: decodeGreek(input), segments: null };
+  if (kb.family === "hangul") return { output: decodeHangul(input, target), segments: null, invalid: 0 };
+  if (kb.family === "greek") return { output: decodeGreek(input), segments: null, invalid: 0 };
   const keyToSym = invert(RUSSIAN_KEYS);
   keyToSym["/"] = "."; keyToSym["?"] = ",";
-  return { output: Array.from(input).map((ch) => keyToSym[ch] ?? ch).join(""), segments: null };
+  return { output: Array.from(input).map((ch) => keyToSym[ch] ?? ch).join(""), segments: null, invalid: 0 };
 }

@@ -1,6 +1,6 @@
 import { decode, TARGETS } from "./lib/decode.js";
-import { getKeyboard, invert } from "./lib/keyboards.js";
-import { loadDict, fillKeyboardSelect, copyText, setStatus, renderWithSpaces } from "./shared.js";
+import { getKeyboard, invert, KEYBOARDS } from "./lib/keyboards.js";
+import { loadDict, fillKeyboardSelect, copyText, setStatus } from "./shared.js";
 
 const $ = (id) => document.getElementById(id);
 const keys = $("keys");
@@ -9,14 +9,13 @@ const target = $("target");
 const output = $("output");
 const status = $("decode-status");
 const copyBtn = $("copy");
-const candidates = $("candidates");
 const optToneless = $("opt-toneless");
 const optCaps = $("opt-caps");
 
 const ROWS = ["`1234567890-=", "qwertyuiop[]", "asdfghjkl;'", "zxcvbnm,./"];
 const NOTES = {
-  zhuyin: "一聲按空白鍵；聲調鍵見數字列。解碼時一聲的空白可省略，但同音斷詞可能不同。",
-  pinyin: "拼音直接使用英文字母，ü 以 v 輸入；數字 1–5 可標示聲調，省略時依詞頻自動判斷。",
+  zhuyin: "一聲按空白鍵；聲調鍵見數字列。解碼時一聲的空白可省略，音節斷點依詞頻判斷。",
+  pinyin: "拼音直接使用英文字母，ü 以 v 輸入；數字 1–5 可標示聲調，未標聲調的音節輸出時不帶調。",
   hangul: "右下角橘色為 Shift 後的字母。複合母音、複合尾音由兩個按鍵組成，會自動組字。",
   russian: "右下角橘色為 Shift 後的字母。俄文配置的句號在 / 鍵、逗號在 Shift + /。",
   greek: "右下角橘色為 Shift 後的字母。帶重音的母音先按 ; 再按字母，分音符先按 Shift + ;。",
@@ -24,8 +23,6 @@ const NOTES = {
 
 let dict = null;
 let dictError = "";
-let choices = new Map();
-let lastKey = "";
 let result = { output: "", segments: null };
 
 fillKeyboardSelect(keyboard);
@@ -70,38 +67,6 @@ function renderChart() {
   $("kb-note").textContent = NOTES[kb.family];
 }
 
-function renderCandidates() {
-  const segs = (result.segments ?? []).map((seg, idx) => ({ seg, idx })).filter(({ seg }) => seg.kind !== "literal");
-  $("candidates-wrap").hidden = segs.length === 0 || target.value !== "han";
-  candidates.replaceChildren(...segs.slice(0, 120).map(({ seg, idx }) => {
-    const li = document.createElement("li");
-    if (seg.kind === "bpmf") li.classList.add("unmapped");
-    const keysEl = document.createElement("span");
-    keysEl.className = "keys";
-    renderWithSpaces(keysEl, seg.src);
-    li.append(keysEl);
-    if (seg.candidates.length > 1) {
-      li.classList.add("poly");
-      const select = document.createElement("select");
-      select.setAttribute("aria-label", `按鍵「${seg.src.trim()}」的候選字`);
-      select.dataset.index = String(idx);
-      const chosen = choices.get(idx) ?? seg.text;
-      select.append(...seg.candidates.slice(0, 15).map((c) => new Option(c.word, c.word, false, c.word === chosen)));
-      li.append(select);
-    } else {
-      const src = document.createElement("span");
-      src.className = "src";
-      src.textContent = seg.kind === "bpmf" ? seg.text : (choices.get(idx) ?? seg.text);
-      li.append(src);
-    }
-    const bpmf = document.createElement("span");
-    bpmf.className = "bpmf";
-    bpmf.textContent = seg.kind === "bpmf" ? "查無此音" : seg.syllables.join(" ");
-    li.append(bpmf);
-    return li;
-  }));
-}
-
 // 輸入中是否含有目前注音配置的聲調鍵（或代表一聲的空白）。
 function hasToneKeys(text) {
   const map = getKeyboard(keyboard.value).map;
@@ -109,21 +74,31 @@ function hasToneKeys(text) {
   return Array.from(text).some((ch) => ch === " " || toneKeys.has(ch));
 }
 
+// 目前注音配置有按鍵組不成音節時，看另一套注音配置能不能解得更完整。
+function betterZhuyinLayout(invalid) {
+  const options = { target: target.value, toneless: optToneless.checked, capsAsKeys: optCaps.checked };
+  return KEYBOARDS
+    .filter((k) => k.family === "zhuyin" && k.id !== keyboard.value)
+    .map((k) => ({ k, invalid: decode(keys.value, { ...options, keyboard: k.id }, dict).invalid }))
+    .filter((x) => x.invalid < invalid)
+    .sort((a, b) => a.invalid - b.invalid)[0]?.k ?? null;
+}
+
 function update() {
-  const key = `${keys.value}\u0000${keyboard.value}\u0000${optToneless.checked}\u0000${optCaps.checked}`;
-  if (key !== lastKey) { choices = new Map(); lastKey = key; }
   const family = getKeyboard(keyboard.value).family;
   $("row-toneless").hidden = family !== "zhuyin";
   $("row-caps").hidden = family !== "zhuyin";
-  result = decode(keys.value, { keyboard: keyboard.value, target: target.value, toneless: optToneless.checked, capsAsKeys: optCaps.checked, choices }, dict);
+  result = decode(keys.value, { keyboard: keyboard.value, target: target.value, toneless: optToneless.checked, capsAsKeys: optCaps.checked }, dict);
   output.textContent = result.output;
-  output.classList.toggle("han", target.value === "han" || target.value === "hangul" || target.value === "text");
+  output.classList.toggle("han", target.value !== "pinyin" && target.value !== "jamo");
   copyBtn.disabled = result.output.length === 0;
 
   if (result.pending && keys.value) {
     setStatus(status, dictError ? `${dictError}` : "注音字典載入中，稍後自動解碼…", dictError ? "error" : "");
-  } else if (result.segments?.some((s) => s.kind === "bpmf")) {
-    setStatus(status, "部分注音找不到對應的字，已以注音符號顯示。請確認鍵盤配置是否正確。", "error");
+  } else if (result.invalid > 0) {
+    const better = family === "zhuyin" ? betterZhuyinLayout(result.invalid) : null;
+    setStatus(status, `有 ${result.invalid} 個按鍵組不成${family === "zhuyin" ? "注音" : "拼音"}音節，已原樣顯示。`
+      + (better ? `改用「${better.name}」可解得更完整。` : "請確認鍵盤配置是否正確。"), "error");
   } else if (result.output && family === "zhuyin" && !optCaps.checked && /[A-Z]/.test(keys.value) && /[a-z0-9]/.test(keys.value)) {
     setStatus(status, "按鍵混有大寫字母，目前原樣保留；若是字首大寫產生的密碼，請開啟「按鍵含字首大寫」。");
   } else if (result.output && family === "zhuyin" && !optToneless.checked && !hasToneKeys(keys.value)
@@ -134,7 +109,6 @@ function update() {
   } else {
     setStatus(status, "");
   }
-  renderCandidates();
 }
 
 keys.addEventListener("input", update);
@@ -142,13 +116,6 @@ keyboard.addEventListener("change", () => { fillTargets(); renderChart(); update
 target.addEventListener("change", update);
 optToneless.addEventListener("change", update);
 optCaps.addEventListener("change", update);
-candidates.addEventListener("change", (event) => {
-  const select = event.target.closest("select");
-  if (!select) return;
-  choices.set(Number(select.dataset.index), select.value);
-  update();
-  candidates.querySelector(`select[data-index="${select.dataset.index}"]`)?.focus();
-});
 copyBtn.addEventListener("click", async () => {
   try {
     await copyText(result.output);

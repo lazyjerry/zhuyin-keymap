@@ -29,11 +29,11 @@
 
 ### 反向解碼（`/decode`）
 
-- 輸入英文按鍵，選擇鍵盤配置（預設注音大千）與編譯目標（預設中文），還原成原文。
-- 注音與拼音可輸出中文、注音符號、漢語拼音（調號）；韓文可輸出組好的韓文或拆開的字母。
-- 中文依詞頻自動選字，每一段都可以在「同音候選」改字。
-- 「按鍵已移除聲調」：沒有聲調鍵的音節以所有聲調比對，可還原移除聲調後的按鍵（`ji9su` →「我愛你」）；輸入完全沒有聲調鍵時會提示開啟。
-- 「按鍵含字首大寫」（預設開啟）：大寫英文字母視同小寫按鍵，`W94S06Xk7` →「太難了」；關閉時大寫字母原樣保留。
+- 輸入英文按鍵，選擇鍵盤配置（預設注音大千）與編譯目標，還原成原文。
+- 注音與拼音輸出注音符號（預設）或漢語拼音（調號）；不轉成漢字，因為同音字無法只靠按鍵判斷。韓文可輸出組好的韓文或拆開的字母。
+- 音節斷點依詞頻判斷；有按鍵組不成音節時會回報數量，若另一套注音配置（大千／倚天）解得更完整，會建議切換。
+- 「按鍵已移除聲調」：沒有聲調鍵的音節以所有聲調比對，輸出不帶聲調（`ji9su` → ㄨㄛ ㄞ ㄋㄧ）；輸入完全沒有聲調鍵時會提示開啟。
+- 「按鍵含字首大寫」（預設開啟）：大寫英文字母視同小寫按鍵，`W94S06Xk7` → ㄊㄞˋ ㄋㄢˊ ㄌㄜ˙；關閉時大寫字母原樣保留。
 - 附上目前鍵盤配置的按鍵對照圖。
 
 ### PWA
@@ -78,13 +78,16 @@ npm run dict:build   # 產生 public/data/zhuyin-dict.txt
 
 詞語只收詞頻 20 以上者，可用環境變數 `MIN_PHRASE_COUNT` 調整。
 
-## PWA icon
+## PWA icon 與分享圖
 
 icon 以 Playwright 渲染 HTML 產生，風格與頁面一致（方格紙底、珊瑚紅上邊線的鍵帽卡片、硬陰影）：
 
 ```sh
 python3 scripts/build-icons.py   # 輸出到 public/icons/
+python3 scripts/build-og.py      # 社群分享圖 public/og-image.png（1200×630）
 ```
+
+頁面已設定 Open Graph、Twitter Card、canonical 與 JSON-LD（WebApplication）。
 
 ## 專案結構
 
@@ -116,4 +119,4 @@ wrangler.jsonc          Cloudflare Pages 部署設定
 
 ## 授權
 
-程式碼以 MIT 授權釋出；注音字典資料來自 McBopomofo（MIT）。
+程式碼以 [MIT License](LICENSE) 釋出。注音字典資料來自 McBopomofo（MIT），原授權條款見 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。

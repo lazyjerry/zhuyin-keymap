@@ -6,8 +6,8 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 const root = import.meta.dirname;
 const publicDir = resolve(root, "public");
 
-// public/ 內不進 precache 的檔案（部署設定，不是頁面資源）。
-const PUBLIC_EXCLUDE = new Set(["_headers", "_redirects"]);
+// public/ 內不進 precache 的檔案（部署設定、社群分享圖，離線用不到）。
+const PUBLIC_EXCLUDE = new Set(["_headers", "_redirects", "og-image.png"]);
 // 頁面以 clean URL 快取，與 Cloudflare Pages 實際提供的網址一致。
 const PAGE_URLS = { "index.html": "/", "decode.html": "/decode" };
 

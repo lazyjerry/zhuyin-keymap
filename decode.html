@@ -3,8 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>鍵位反向解碼器｜英文按鍵還原成中文、注音或其他語言</title>
-  <meta name="description" content="把用注音等鍵盤配置打出的英文按鍵還原成中文、注音符號、漢語拼音或韓文、俄文、希臘文。全部在瀏覽器完成。">
+  <title>鍵位反向解碼器｜英文按鍵還原成注音、拼音或其他語言</title>
+  <meta name="description" content="把用注音等鍵盤配置打出的英文按鍵還原成注音符號、漢語拼音，或韓文、俄文、希臘文。全部在瀏覽器完成。">
+  <link rel="canonical" href="https://zhuyin-keymap.jlab-app.cloud/decode">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="注音鍵位密碼轉換器">
+  <meta property="og:locale" content="zh_TW">
+  <meta property="og:url" content="https://zhuyin-keymap.jlab-app.cloud/decode">
+  <meta property="og:title" content="鍵位反向解碼器｜英文按鍵還原成注音、拼音或其他語言">
+  <meta property="og:description" content="把用注音等鍵盤配置打出的英文按鍵還原成注音符號、漢語拼音，或韓文、俄文、希臘文。全部在瀏覽器完成。">
+  <meta property="og:image" content="https://zhuyin-keymap.jlab-app.cloud/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="注音鍵位密碼轉換器：中文依鍵盤配置換成英文按鍵，例如「我愛台灣」→ Ji394W96J0">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="鍵位反向解碼器｜英文按鍵還原成注音、拼音或其他語言">
+  <meta name="twitter:description" content="把用注音等鍵盤配置打出的英文按鍵還原成注音符號、漢語拼音，或韓文、俄文、希臘文。全部在瀏覽器完成。">
+  <meta name="twitter:image" content="https://zhuyin-keymap.jlab-app.cloud/og-image.png">
   <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
@@ -29,7 +44,7 @@
     <p class="eyebrow">KEYMAP DEV TOOL · DECODE</p>
     <div class="hero-grid">
       <h1><span>鍵位反向</span><em>解碼還原</em></h1>
-      <p class="lede">忘了那串英文是用哪句話打出來的？選好鍵盤，把按鍵還原成中文、注音或原本的語言。</p>
+      <p class="lede">忘了那串英文是用哪句話打出來的？選好鍵盤，把按鍵還原成注音、拼音或原本的語言。</p>
     </div>
   </section>
 
@@ -42,7 +57,7 @@
       <div class="split">
         <div class="panel">
           <label class="field-label" for="keys">英文按鍵</label>
-          <textarea id="keys" class="mono" maxlength="1000" placeholder="例如：ji394w96j0 （我愛台灣）" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="keys-hint"></textarea>
+          <textarea id="keys" class="mono" maxlength="1000" placeholder="例如：ji394w96j0 （ㄨㄛˇ ㄞˋ ㄊㄞˊ ㄨㄢ）" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="keys-hint"></textarea>
           <p class="hint" id="keys-hint">最多 1000 字元。注音的一聲可帶或不帶空白；無法對應的按鍵會原樣保留。</p>
           <div class="field-row">
             <div><label class="field-label" for="keyboard">鍵盤配置</label><select id="keyboard"></select></div>
@@ -50,11 +65,11 @@
           </div>
           <div class="toggles">
             <label class="toggle-row" id="row-toneless">
-              <span><strong>按鍵已移除聲調</strong><small>ji9su →「我愛你」</small></span>
+              <span><strong>按鍵已移除聲調</strong><small>ji9su → ㄨㄛ ㄞ ㄋㄧ（不帶聲調）</small></span>
               <input type="checkbox" id="opt-toneless"><i aria-hidden="true"></i>
             </label>
             <label class="toggle-row" id="row-caps">
-              <span><strong>按鍵含字首大寫</strong><small>W94S06Xk7 →「太難了」</small></span>
+              <span><strong>按鍵含字首大寫</strong><small>W94S06Xk7 → ㄊㄞˋ ㄋㄢˊ ㄌㄜ˙</small></span>
               <input type="checkbox" id="opt-caps" checked><i aria-hidden="true"></i>
             </label>
           </div>
@@ -66,11 +81,6 @@
           </div>
           <output class="result han" id="output" aria-labelledby="output-label" aria-live="polite"></output>
           <p class="status" id="decode-status" role="status"></p>
-          <div class="breakdown" id="candidates-wrap" hidden>
-            <span class="field-label">同音候選</span>
-            <p class="hint">自動選字依詞頻判斷，選錯時可在下拉選單改字。</p>
-            <ul class="breakdown-list" id="candidates" aria-label="逐段候選字"></ul>
-          </div>
         </div>
       </div>
     </section>
@@ -93,7 +103,8 @@
   </section>
   <footer>
     © 2026 <a href="https://github.com/lazyjerry/zhuyin-keymap" rel="noopener">github.com/lazyjerry/zhuyin-keymap</a>
-    <span>·</span> 詞庫：<a href="https://github.com/openvanilla/McBopomofo" rel="noopener">McBopomofo</a>（MIT）
+    <span>·</span> <a href="https://github.com/lazyjerry/zhuyin-keymap/blob/main/LICENSE" rel="noopener license">MIT License</a>
+    <span>·</span> 詞庫：<a href="https://github.com/openvanilla/McBopomofo" rel="noopener">McBopomofo</a>（MIT，<a href="https://github.com/lazyjerry/zhuyin-keymap/blob/main/THIRD-PARTY-NOTICES.md" rel="noopener">授權聲明</a>）
   </footer>
   <img class="marker" src="/jerry.png" width="1" height="1" alt="" aria-hidden="true">
   <script type="module" src="/src/decode-page.js"></script>

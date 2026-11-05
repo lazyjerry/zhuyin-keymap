@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { parseDict, pinyinWithMarks } from "../src/lib/dict.js";
+import { parseDict, pinyinWithMarks, readText, stripTone } from "../src/lib/dict.js";
 import { encode } from "../src/lib/encode.js";
 import { decode } from "../src/lib/decode.js";
 import { countText } from "../src/lib/stats.js";
@@ -9,7 +9,9 @@ import { evaluate } from "../src/lib/password.js";
 
 const dict = parseDict(readFileSync(new URL("../public/data/zhuyin-dict.txt", import.meta.url), "utf8"));
 const enc = (text, opts = {}) => encode(text, { keyboard: "dachen", autoOther: true, tone1Space: true, ...opts }, dict).output;
-const dec = (keys, opts = {}) => decode(keys, { keyboard: "dachen", target: "han", ...opts }, dict).output;
+const dec = (keys, opts = {}) => decode(keys, { keyboard: "dachen", target: "bpmf", ...opts }, dict).output;
+// 原文的注音讀音（以空白分隔），作為往返比對的期望值。
+const bpmfOf = (text, toneless = false) => readText(dict, text).map((r) => (toneless ? stripTone(r.reading) : r.reading)).join(" ");
 
 test("注音大千：常用詞", () => {
   assert.equal(enc("你好"), "su3cl3");
@@ -37,26 +39,32 @@ test("其他語系自動套用", () => {
   assert.equal(enc("ABC 123，"), "ABC 123<");
 });
 
-test("反向：注音大千 → 中文", () => {
-  assert.equal(dec("su3cl3"), "你好");
-  assert.equal(dec("ji394su3"), "我愛你");
-  assert.equal(dec("w96j0 "), "台灣");
-  assert.equal(dec("w96j0"), "台灣");
-  assert.equal(dec("su3cl3", { target: "bpmf" }), "ㄋㄧˇ ㄏㄠˇ");
+test("反向：注音大千 → 注音、拼音", () => {
+  assert.equal(dec("su3cl3"), "ㄋㄧˇ ㄏㄠˇ");
+  assert.equal(dec("ji394su3"), "ㄨㄛˇ ㄞˋ ㄋㄧˇ");
+  assert.equal(dec("w96j0 "), "ㄊㄞˊ ㄨㄢ");
+  assert.equal(dec("w96j0"), "ㄊㄞˊ ㄨㄢ");
   assert.equal(dec("su3cl3", { target: "pinyin" }), "nǐ hǎo");
-  assert.equal(dec("ABC su3"), "ABC 你");
+  assert.equal(dec("ABC su3"), "ABC ㄋㄧˇ");
+});
+
+test("反向：配置選錯時回報組不成音節的按鍵數", () => {
+  const keys = enc("令狐沖");
+  assert.equal(decode(keys, { keyboard: "dachen", target: "bpmf" }, dict).invalid, 0);
+  assert.ok(decode(keys, { keyboard: "eten", target: "bpmf" }, dict).invalid > 0);
 });
 
 test("反向：往返一致", () => {
   for (const text of ["今天天氣很好", "我們一起去吃飯", "資訊安全很重要", "銀行密碼"]) {
-    assert.equal(dec(enc(text)), text);
-    assert.equal(decode(enc(text, { keyboard: "eten" }), { keyboard: "eten", target: "han" }, dict).output, text);
+    assert.equal(dec(enc(text)), bpmfOf(text));
+    assert.equal(dec(enc(text, { keyboard: "eten" }), { keyboard: "eten" }), bpmfOf(text));
   }
 });
 
 test("反向：拼音、韓文、俄文、希臘文", () => {
-  assert.equal(dec("nihao", { keyboard: "pinyin" }), "你好");
-  assert.equal(dec("ni3hao3", { keyboard: "pinyin" }), "你好");
+  assert.equal(dec("nihao", { keyboard: "pinyin" }), "ㄋㄧ ㄏㄠ");
+  assert.equal(dec("nihao", { keyboard: "pinyin", target: "pinyin" }), "ni hao");
+  assert.equal(dec("ni3hao3", { keyboard: "pinyin" }), "ㄋㄧˇ ㄏㄠˇ");
   assert.equal(dec("dkssudgktpdy", { keyboard: "hangul", target: "hangul" }), "안녕하세요");
   assert.equal(dec("gksrmf", { keyboard: "hangul", target: "hangul" }), "한글");
   assert.equal(dec("dlfrdj", { keyboard: "hangul", target: "hangul" }), "읽어");
@@ -87,9 +95,9 @@ test("密碼標準", () => {
 test("移除聲調：正向不輸出聲調鍵、反向以所有聲調比對", () => {
   assert.equal(enc("我愛台灣", { dropTones: true }), "ji9w9j0");
   assert.equal(enc("你好", { keyboard: "eten", dropTones: true }), "nehz");
-  assert.equal(dec("ji9w9j0", { toneless: true }), "我愛台灣");
+  assert.equal(dec("ji9w9j0", { toneless: true }), "ㄨㄛ ㄞ ㄊㄞ ㄨㄢ");
   for (const text of ["今天天氣很好", "資訊安全很重要"]) {
-    assert.equal(dec(enc(text, { dropTones: true }), { toneless: true }), text);
+    assert.equal(dec(enc(text, { dropTones: true }), { toneless: true }), bpmfOf(text, true));
   }
 });
 
@@ -97,9 +105,9 @@ test("字首大寫：正向每字首鍵大寫、反向大寫視同按鍵", () =>
   assert.equal(enc("太難了", { capitalize: true }), "W94S06Xk7");
   assert.equal(enc("台灣", { capitalize: true, keyboard: "pinyin" }), "TaiWan");
   assert.equal(enc("安녕", { capitalize: true }), "0 sud");
-  assert.equal(dec("W94S06Xk7", { capsAsKeys: true }), "太難了");
-  assert.equal(dec("TaiWan", { keyboard: "pinyin" }), "台灣");
+  assert.equal(dec("W94S06Xk7", { capsAsKeys: true }), "ㄊㄞˋ ㄋㄢˊ ㄌㄜ˙");
+  assert.equal(dec("TaiWan", { keyboard: "pinyin" }), "ㄊㄞ ㄨㄢ");
   for (const text of ["今天天氣很好", "資訊安全很重要"]) {
-    assert.equal(dec(enc(text, { capitalize: true }), { capsAsKeys: true }), text);
+    assert.equal(dec(enc(text, { capitalize: true }), { capsAsKeys: true }), bpmfOf(text));
   }
 });

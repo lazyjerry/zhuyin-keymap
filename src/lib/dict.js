@@ -19,6 +19,8 @@ export function parseDict(text) {
     if (line.startsWith("#")) { section = line; continue; }
     const parts = line.split("\t");
     if (section === "#C") {
+      // 詞庫把注音符號本身（ㄅ、ㄒ…）也當成字收錄；收進來會讓任何單一符號都算有效音節。
+      if (/^[\u3105-\u312f\u31a0-\u31bf]$/u.test(parts[0])) continue;
       const count = Number(parts[1]);
       chars.set(parts[0], { count, readings: parts[2].split(",") });
       total += count;
@@ -46,9 +48,14 @@ export function parseDict(text) {
     for (let i = 1; i < syllables.length; i++) prefixes.add(syllables.slice(0, i).join(" "));
   }
 
+  // 有效音節只認「有實際漢字」的讀音。
+  const syllables = new Set();
+  for (const r of bySyllable.keys()) if (!r.includes(" ")) syllables.add(r);
+
   // 拼音：去聲調拼音 → { 聲調 → 注音音節 }。
   const pinyinBase = new Map();
   for (const [bpmf, py] of pinyin) {
+    if (!syllables.has(bpmf)) continue;
     const base = py.replace(/[1-5]$/, "");
     if (!pinyinBase.has(base)) pinyinBase.set(base, new Map());
     const byTone = pinyinBase.get(base);
@@ -56,8 +63,6 @@ export function parseDict(text) {
     if (!byTone.has(tone)) byTone.set(tone, bpmf);
   }
 
-  const syllables = new Set(pinyin.keys());
-  for (const r of bySyllable.keys()) if (!r.includes(" ")) syllables.add(r);
   const bases = new Set([...syllables].map(stripTone));
   // 去聲調注音 → 所有存在的聲調變體，供「按鍵已移除聲調」時解碼。
   const toneVariants = new Map();
@@ -115,10 +120,11 @@ export function readText(dict, text) {
 }
 
 /**
- * 反向：把「音節格」解成最可能的中文。
- * lattice[i] = [{ end, syllables: [可能的注音音節…], src }]，表示 token i..end 可讀成一個音節。
+ * 反向：把「音節格」依詞頻解成最可能的音節斷法。
+ * lattice[i] = [{ end, syllables: [可能的注音音節…], toned, src }]，表示 token i..end 可讀成一個音節；
+ * toned 為 false 表示按鍵沒有聲調資訊，音節的聲調只是依詞頻猜的。
  * literalAt(i) 回傳 { end, text, penalty } 表示該位置原樣輸出（無法組成音節時的退路）。
- * 回傳 [{ kind: "han" | "bpmf" | "literal", text, syllables, candidates, src }]
+ * 回傳 [{ kind: "han" | "bpmf" | "literal", text, syllables, toned, src, invalid }]
  */
 export function decodeLattice(dict, size, lattice, literalAt) {
   const best = new Array(size + 1).fill(-Infinity);
@@ -129,30 +135,32 @@ export function decodeLattice(dict, size, lattice, literalAt) {
   for (let i = 0; i < size; i++) {
     if (best[i] === -Infinity) continue;
     const lit = literalAt(i);
-    relax(lit.end, best[i] + lit.penalty, { start: i, kind: "literal", text: lit.text });
+    // penalty < 0 代表這個按鍵本該組成音節卻組不成（多半是鍵盤配置選錯）。
+    relax(lit.end, best[i] + lit.penalty, { start: i, kind: "literal", text: lit.text, invalid: lit.penalty < 0 });
 
     // 深度優先展開音節路徑，查單字與詞語。
-    const walk = (pos, path, key, src) => {
+    const walk = (pos, path, toned, key, src) => {
       for (const edge of lattice[pos] ?? []) {
         for (const syl of edge.syllables) {
           const nextKey = key ? `${key} ${syl}` : syl;
           const nextPath = [...path, syl];
+          const nextToned = [...toned, edge.toned];
           const nextSrc = src + edge.src;
           const words = dict.bySyllable.get(nextKey);
           if (words) {
             relax(edge.end, best[i] + score(dict, words[0].count), {
-              start: i, kind: "han", text: words[0].word, syllables: nextPath, candidates: words, src: nextSrc,
+              start: i, kind: "han", text: words[0].word, syllables: nextPath, toned: nextToned, src: nextSrc,
             });
           } else if (nextPath.length === 1) {
             relax(edge.end, best[i] - dict.logTotal * 2, {
-              start: i, kind: "bpmf", text: syl, syllables: nextPath, candidates: [], src: nextSrc,
+              start: i, kind: "bpmf", text: syl, syllables: nextPath, toned: nextToned, src: nextSrc,
             });
           }
-          if (nextPath.length < dict.maxPhraseLen && dict.prefixes.has(nextKey)) walk(edge.end, nextPath, nextKey, nextSrc);
+          if (nextPath.length < dict.maxPhraseLen && dict.prefixes.has(nextKey)) walk(edge.end, nextPath, nextToned, nextKey, nextSrc);
         }
       }
     };
-    walk(i, [], "", "");
+    walk(i, [], [], "", "");
   }
 
   const segments = [];
