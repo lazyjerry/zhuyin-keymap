@@ -2,8 +2,8 @@
 
 把中文或其他語言，依鍵盤配置換成在美式鍵盤上實際敲下的英文按鍵；同時統計字元、依常見密碼標準檢核，並提供反向解碼。
 
-- 線上網址：https://zhuyin-keymap.jlib-cf.workers.dev/
-- 反向解碼：https://zhuyin-keymap.jlib-cf.workers.dev/decode
+- 線上網址：https://zhuyin-keymap.jlab-app.cloud/（備用 https://zhuyin-keymap.pages.dev/）
+- 反向解碼：https://zhuyin-keymap.jlab-app.cloud/decode
 
 ## 功能
 
@@ -51,10 +51,10 @@ npm test         # 核心邏輯測試（node:test）
 
 ```sh
 npm run build    # 輸出到 dist/
-npx wrangler deploy   # 以 Cloudflare Workers 靜態資源發布 dist/
+npx wrangler pages deploy --project-name zhuyin-keymap --branch main   # 發布 dist/ 到 Cloudflare Pages
 ```
 
-部署設定在 `wrangler.jsonc`。`dist/` 為純靜態檔案，也可以部署到 Cloudflare Pages 或任何靜態主機。
+部署設定在 `wrangler.jsonc`（`pages_build_output_dir`）。`dist/` 為純靜態檔案，也可以部署到任何靜態主機。
 
 ## 注音字典
 
@@ -88,7 +88,7 @@ public/
   _headers              Cloudflare 回應標頭
 scripts/                字典下載與轉檔腳本
 tests/                  核心邏輯測試
-wrangler.jsonc          Cloudflare Workers 靜態資源部署設定
+wrangler.jsonc          Cloudflare Pages 部署設定
 ```
 
 ## 授權
