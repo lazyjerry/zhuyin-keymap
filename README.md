@@ -2,8 +2,8 @@
 
 把中文或其他語言，依鍵盤配置換成在美式鍵盤上實際敲下的英文按鍵；同時統計字元、依常見密碼標準檢核，並提供反向解碼。
 
-- 線上網址：https://zhuyin-keymap.pages.dev/
-- 反向解碼：https://zhuyin-keymap.pages.dev/decode.html
+- 線上網址：https://zhuyin-keymap.jlib-cf.workers.dev/
+- 反向解碼：https://zhuyin-keymap.jlib-cf.workers.dev/decode
 
 ## 功能
 
@@ -24,7 +24,7 @@
   - 一般網站常見規則（8 字元以上、大小寫、數字、符號）
   - 另提示空白、非 ASCII 字元、過長等相容性問題，並粗估熵值。
 
-### 反向解碼（`/decode.html`）
+### 反向解碼（`/decode`）
 
 - 輸入英文按鍵，選擇鍵盤配置（預設注音大千）與編譯目標（預設中文），還原成原文。
 - 注音與拼音可輸出中文、注音符號、漢語拼音（調號）；韓文可輸出組好的韓文或拆開的字母。
@@ -51,10 +51,10 @@ npm test         # 核心邏輯測試（node:test）
 
 ```sh
 npm run build    # 輸出到 dist/
-npx wrangler pages deploy dist --project-name zhuyin-keymap
+npx wrangler deploy   # 以 Cloudflare Workers 靜態資源發布 dist/
 ```
 
-`dist/` 為純靜態檔案，可部署到 Cloudflare Pages 或任何靜態主機。
+部署設定在 `wrangler.jsonc`。`dist/` 為純靜態檔案，也可以部署到 Cloudflare Pages 或任何靜態主機。
 
 ## 注音字典
 
@@ -85,9 +85,10 @@ src/
   style.css             樣式
 public/
   data/zhuyin-dict.txt  注音字典
-  _headers              Cloudflare Pages 標頭
+  _headers              Cloudflare 回應標頭
 scripts/                字典下載與轉檔腳本
 tests/                  核心邏輯測試
+wrangler.jsonc          Cloudflare Workers 靜態資源部署設定
 ```
 
 ## 授權
