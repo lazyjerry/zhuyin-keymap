@@ -63,6 +63,8 @@ export function renderWithSpaces(el, text) {
 // 正式建置才註冊 service worker（開發伺服器沒有 sw.js）。
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("Service worker 註冊失敗", err));
+    // 自訂網域的 zone 可能把 JS 的瀏覽器快取蓋成數小時，檢查 sw.js 更新時一律繞過 HTTP 快取。
+    navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" })
+      .catch((err) => console.warn("Service worker 註冊失敗", err));
   });
 }
