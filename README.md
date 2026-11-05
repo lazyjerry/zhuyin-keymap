@@ -36,6 +36,12 @@
 - 「按鍵含字首大寫」（預設開啟）：大寫英文字母視同小寫按鍵，`W94S06Xk7` →「太難了」；關閉時大寫字母原樣保留。
 - 附上目前鍵盤配置的按鍵對照圖。
 
+### PWA
+
+- 可安裝成 App（支援的瀏覽器會顯示「安裝」，iOS 用「加入主畫面」），主畫面捷徑可直接開啟反向解碼。
+- 第一次開啟後，頁面、程式與注音字典都會快取，離線也能轉換與解碼。
+- 頁面採 Network First，上線時永遠拿最新版；注音字典離線時用快取，上線時在背景更新。
+
 ## 隱私
 
 - 轉換、統計、檢核與解碼都在瀏覽器完成，不傳送輸入內容，不使用資料庫、Cookie 或追蹤碼。
@@ -72,6 +78,14 @@ npm run dict:build   # 產生 public/data/zhuyin-dict.txt
 
 詞語只收詞頻 20 以上者，可用環境變數 `MIN_PHRASE_COUNT` 調整。
 
+## PWA icon
+
+icon 以 Playwright 渲染 HTML 產生，風格與頁面一致（方格紙底、珊瑚紅上邊線的鍵帽卡片、硬陰影）：
+
+```sh
+python3 scripts/build-icons.py   # 輸出到 public/icons/
+```
+
 ## 專案結構
 
 ```text
@@ -86,12 +100,16 @@ src/
   lib/password.js       密碼標準檢核
   encode-page.js        首頁互動
   decode-page.js        解碼頁互動
-  shared.js             共用：載入字典、複製
+  shared.js             共用：載入字典、複製、註冊 service worker
+  sw.js                 service worker 樣板（建置時代入 precache 清單）
   style.css             樣式
 public/
   data/zhuyin-dict.txt  注音字典
+  icons/                PWA icon（由 scripts/build-icons.py 產生）
+  manifest.webmanifest  PWA manifest
   _headers              Cloudflare 回應標頭
-scripts/                字典下載與轉檔腳本
+scripts/                字典下載與轉檔、icon 產生腳本
+vite.config.js          多頁建置設定與 service worker 產生外掛
 tests/                  核心邏輯測試
 wrangler.jsonc          Cloudflare Pages 部署設定
 ```

@@ -1,0 +1,23 @@
+{
+  "id": "/",
+  "name": "注音鍵位密碼轉換器",
+  "short_name": "注音鍵位",
+  "description": "把中文或其他語言依注音等鍵盤配置換成英文按鍵，統計字元、檢核密碼標準，並可反向解碼。全部在瀏覽器完成。",
+  "lang": "zh-Hant-TW",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f3ed",
+  "theme_color": "#f5f3ed",
+  "categories": ["utilities", "productivity", "security"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "鍵位轉換", "url": "/", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "反向解碼", "url": "/decode", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}

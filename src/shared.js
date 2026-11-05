@@ -59,3 +59,10 @@ export function renderWithSpaces(el, text) {
     return mark;
   }));
 }
+
+// 正式建置才註冊 service worker（開發伺服器沒有 sw.js）。
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("Service worker 註冊失敗", err));
+  });
+}
