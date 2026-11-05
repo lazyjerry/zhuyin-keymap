@@ -1,6 +1,6 @@
 import { decode, TARGETS } from "./lib/decode.js";
 import { getKeyboard, invert } from "./lib/keyboards.js";
-import { loadDict, fillKeyboardSelect, copyText, setStatus } from "./shared.js";
+import { loadDict, fillKeyboardSelect, copyText, setStatus, renderWithSpaces } from "./shared.js";
 
 const $ = (id) => document.getElementById(id);
 const keys = $("keys");
@@ -10,6 +10,7 @@ const output = $("output");
 const status = $("decode-status");
 const copyBtn = $("copy");
 const candidates = $("candidates");
+const optToneless = $("opt-toneless");
 
 const ROWS = ["`1234567890-=", "qwertyuiop[]", "asdfghjkl;'", "zxcvbnm,./"];
 const NOTES = {
@@ -76,7 +77,7 @@ function renderCandidates() {
     if (seg.kind === "bpmf") li.classList.add("unmapped");
     const keysEl = document.createElement("span");
     keysEl.className = "keys";
-    keysEl.textContent = seg.src.replace(/ /g, "␣");
+    renderWithSpaces(keysEl, seg.src);
     li.append(keysEl);
     if (seg.candidates.length > 1) {
       li.classList.add("poly");
@@ -100,10 +101,19 @@ function renderCandidates() {
   }));
 }
 
+// 輸入中是否含有目前注音配置的聲調鍵（或代表一聲的空白）。
+function hasToneKeys(text) {
+  const map = getKeyboard(keyboard.value).map;
+  const toneKeys = new Set(["ˊ", "ˇ", "ˋ", "˙"].map((t) => map[t]));
+  return Array.from(text).some((ch) => ch === " " || toneKeys.has(ch));
+}
+
 function update() {
-  const key = `${keys.value}\u0000${keyboard.value}`;
+  const key = `${keys.value}\u0000${keyboard.value}\u0000${optToneless.checked}`;
   if (key !== lastKey) { choices = new Map(); lastKey = key; }
-  result = decode(keys.value, { keyboard: keyboard.value, target: target.value, choices }, dict);
+  const family = getKeyboard(keyboard.value).family;
+  $("row-toneless").hidden = family !== "zhuyin";
+  result = decode(keys.value, { keyboard: keyboard.value, target: target.value, toneless: optToneless.checked, choices }, dict);
   output.textContent = result.output;
   output.classList.toggle("han", target.value === "han" || target.value === "hangul" || target.value === "text");
   copyBtn.disabled = result.output.length === 0;
@@ -112,6 +122,9 @@ function update() {
     setStatus(status, dictError ? `${dictError}` : "注音字典載入中，稍後自動解碼…", dictError ? "error" : "");
   } else if (result.segments?.some((s) => s.kind === "bpmf")) {
     setStatus(status, "部分注音找不到對應的字，已以注音符號顯示。請確認鍵盤配置是否正確。", "error");
+  } else if (result.output && family === "zhuyin" && !optToneless.checked && !hasToneKeys(keys.value)
+    && (result.segments ?? []).filter((s) => s.kind !== "literal").length > 0) {
+    setStatus(status, "按鍵裡沒有任何聲調鍵或空白；若是移除聲調後的密碼，請開啟「按鍵已移除聲調」。");
   } else if (result.output) {
     setStatus(status, `已還原 ${Array.from(keys.value).length} 個按鍵。`);
   } else {
@@ -123,6 +136,7 @@ function update() {
 keys.addEventListener("input", update);
 keyboard.addEventListener("change", () => { fillTargets(); renderChart(); update(); });
 target.addEventListener("change", update);
+optToneless.addEventListener("change", update);
 candidates.addEventListener("change", (event) => {
   const select = event.target.closest("select");
   if (!select) return;

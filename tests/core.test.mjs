@@ -83,3 +83,12 @@ test("密碼標準", () => {
   assert.ok(strong.standards.every((s) => s.pass));
   assert.ok(evaluate("w96j0 ").warnings.length > 0);
 });
+
+test("移除聲調：正向不輸出聲調鍵、反向以所有聲調比對", () => {
+  assert.equal(enc("我愛台灣", { dropTones: true }), "ji9w9j0");
+  assert.equal(enc("你好", { keyboard: "eten", dropTones: true }), "nehz");
+  assert.equal(dec("ji9w9j0", { toneless: true }), "我愛台灣");
+  for (const text of ["今天天氣很好", "資訊安全很重要"]) {
+    assert.equal(dec(enc(text, { dropTones: true }), { toneless: true }), text);
+  }
+});

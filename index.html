@@ -49,6 +49,10 @@
               <span><strong>一聲輸出空白鍵</strong><small>實際打字時一聲要按空白；關閉後一聲不輸出任何按鍵</small></span>
               <input type="checkbox" id="opt-tone1" checked><i aria-hidden="true"></i>
             </label>
+            <label class="toggle-row" id="row-drop-tones">
+              <span><strong>移除聲調鍵</strong><small>一二三四聲與輕聲都不輸出按鍵，例如「我愛你」→ ji9su</small></span>
+              <input type="checkbox" id="opt-drop-tones"><i aria-hidden="true"></i>
+            </label>
             <label class="toggle-row" id="row-pinyin" hidden>
               <span><strong>拼音附加聲調數字</strong><small>例如 ni3hao3；一聲為 1、輕聲為 5</small></span>
               <input type="checkbox" id="opt-pinyin-tone"><i aria-hidden="true"></i>
@@ -64,7 +68,7 @@
           <p class="status" id="encode-status" role="status"></p>
           <div class="breakdown">
             <span class="field-label">讀音拆解</span>
-            <p class="hint">破音字可在下拉選單改讀音，紅框為無法對應的字元；結果中的 ␣ 代表空白鍵。</p>
+            <p class="hint">破音字可在下拉選單改讀音，紅框為無法對應的字元；橘色 ␣ 標示空白鍵，複製時是真正的空白。</p>
             <ul class="breakdown-list" id="breakdown" aria-label="逐字對應"></ul>
           </div>
         </div>
@@ -92,6 +96,11 @@
           <div class="stat"><dt>其他文字</dt><dd data-key="letter">0</dd></div>
         </dl>
         <p class="hint" style="margin-top:12px">總字數以使用者看到的字元計算（emoji、組合字算一個）；特殊符號含半形標點與 emoji。</p>
+        <div class="check-summary">
+          <div class="meter-head"><span>密碼檢核項目</span><strong id="check-count">符合 0 / 0 項</strong></div>
+          <ul class="check-chips" id="check-list" aria-live="polite" aria-label="已符合的密碼檢核項目"></ul>
+          <p class="hint" id="check-missing"></p>
+        </div>
       </div>
     </section>
 

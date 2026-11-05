@@ -20,47 +20,69 @@ const categories = (pw) => ({
   otherLetter: /[\p{Lo}\p{Lm}]/u.test(pw),
 });
 
+// 各標準共用的檢核項目；同一項目只定義一次，字元統計卡用它做拆解統計。
+export const CHECKS = [
+  { id: "len6", label: "長度至少 6 字元" },
+  { id: "len8", label: "長度至少 8 字元" },
+  { id: "len12", label: "長度至少 12 字元" },
+  { id: "len14", label: "長度至少 14 字元" },
+  { id: "len15", label: "長度至少 15 字元" },
+  { id: "notCommon", label: "不在常見密碼清單" },
+  { id: "alnum", label: "同時包含英文字母與數字" },
+  { id: "complexity3", label: "大寫、小寫、數字、符號、其他文字中至少三類" },
+  { id: "upper", label: "包含大寫英文" },
+  { id: "lower", label: "包含小寫英文" },
+  { id: "digit", label: "包含數字" },
+  { id: "symbol", label: "包含特殊符號" },
+];
+const LABEL = Object.fromEntries(CHECKS.map((c) => [c.id, c.label]));
+
 export function evaluate(pw) {
   const len = Array.from(pw).length;
   const cat = categories(pw);
   const common = isCommon(pw);
   const winGroups = [cat.upper, cat.lower, cat.digit, cat.symbol, cat.otherLetter].filter(Boolean).length;
-  const rule = (label, pass) => ({ label, pass });
+  const results = {
+    len6: len >= 6, len8: len >= 8, len12: len >= 12, len14: len >= 14, len15: len >= 15,
+    notCommon: len > 0 && !common,
+    alnum: (cat.upper || cat.lower || cat.otherLetter) && cat.digit,
+    complexity3: winGroups >= 3,
+    upper: cat.upper, lower: cat.lower, digit: cat.digit, symbol: cat.symbol,
+  };
+  const rule = (id) => ({ id, label: LABEL[id], pass: results[id] });
+  const checks = CHECKS.map((c) => rule(c.id));
 
   const standards = [
     {
       id: "nist-single", name: "NIST SP 800-63B-4（密碼為唯一驗證因子）", ref: "2025 年第 4 版 §3.1.1.2",
-      rules: [rule("長度至少 15 字元", len >= 15), rule("不在常見／外洩密碼清單", !common)],
-      note: "不要求混合字元類別；系統應允許至少 64 字元。",
+      rules: [rule("len15"), rule("notCommon")],
+      note: "不要求混合字元類別；系統應允許至少 64 字元。常見清單亦應涵蓋外洩密碼。",
     },
     {
       id: "nist-mfa", name: "NIST SP 800-63B-4（搭配多因子驗證）", ref: "2025 年第 4 版 §3.1.1.2",
-      rules: [rule("長度至少 8 字元", len >= 8), rule("不在常見／外洩密碼清單", !common)],
+      rules: [rule("len8"), rule("notCommon")],
     },
     {
       id: "asvs", name: "OWASP ASVS 5.0", ref: "V6.2.1、V6.2.4",
-      rules: [rule("長度至少 8 字元", len >= 8), rule("不在常見密碼清單", !common)],
+      rules: [rule("len8"), rule("notCommon")],
       note: len >= 8 && len < 15 ? "已達最低要求，標準強烈建議 15 字元以上。" : "",
     },
     {
       id: "pci", name: "PCI DSS v4.0.1", ref: "要求 8.3.6",
-      rules: [rule("長度至少 12 字元", len >= 12), rule("同時包含英文字母與數字", (cat.upper || cat.lower || cat.otherLetter) && cat.digit)],
+      rules: [rule("len12"), rule("alnum")],
     },
     {
       id: "cis", name: "CIS Benchmark（Windows 密碼原則）", ref: "最小密碼長度 14、啟用複雜度需求",
-      rules: [rule("長度至少 14 字元", len >= 14), rule("符合 Windows 複雜度（五類中至少三類）", winGroups >= 3)],
+      rules: [rule("len14"), rule("complexity3")],
     },
     {
       id: "windows", name: "Microsoft Windows 複雜度需求", ref: "Password must meet complexity requirements",
-      rules: [rule("大寫、小寫、數字、符號、其他文字中至少三類", winGroups >= 3), rule("長度至少 6 字元", len >= 6)],
+      rules: [rule("complexity3"), rule("len6")],
       note: "實際長度下限由「最小密碼長度」原則另行設定；本項不檢查是否包含帳號名稱。",
     },
     {
       id: "web", name: "一般網站常見規則", ref: "業界慣例，非正式標準",
-      rules: [
-        rule("長度至少 8 字元", len >= 8), rule("包含大寫英文", cat.upper), rule("包含小寫英文", cat.lower),
-        rule("包含數字", cat.digit), rule("包含特殊符號", cat.symbol),
-      ],
+      rules: [rule("len8"), rule("upper"), rule("lower"), rule("digit"), rule("symbol")],
     },
   ].map((s) => ({ ...s, pass: len > 0 && s.rules.every((r) => r.pass) }));
 
@@ -73,7 +95,7 @@ export function evaluate(pw) {
     + (/[\x20-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]/.test(pw) ? 33 : 0) + (/[^\x20-\x7e]/.test(pw) ? 100 : 0);
   const entropy = len && pool ? Math.round(len * Math.log2(pool)) : 0;
 
-  return { length: len, standards, warnings, entropy, common };
+  return { length: len, standards, checks, warnings, entropy, common };
 }
 
 export function entropyLabel(bits) {

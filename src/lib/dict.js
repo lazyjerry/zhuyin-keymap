@@ -59,9 +59,16 @@ export function parseDict(text) {
   const syllables = new Set(pinyin.keys());
   for (const r of bySyllable.keys()) if (!r.includes(" ")) syllables.add(r);
   const bases = new Set([...syllables].map(stripTone));
+  // 去聲調注音 → 所有存在的聲調變體，供「按鍵已移除聲調」時解碼。
+  const toneVariants = new Map();
+  for (const syl of syllables) {
+    const base = stripTone(syl);
+    if (!toneVariants.has(base)) toneVariants.set(base, []);
+    toneVariants.get(base).push(syl);
+  }
 
   return {
-    chars, phrases, pinyin, pinyinBase, bySyllable, prefixes, syllables, bases,
+    chars, phrases, pinyin, pinyinBase, bySyllable, prefixes, syllables, bases, toneVariants,
     maxPhraseLen: Math.min(maxPhraseLen, 6),
     logTotal: Math.log(total + 1),
   };

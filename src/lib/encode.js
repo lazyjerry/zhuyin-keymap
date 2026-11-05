@@ -40,6 +40,7 @@ function syllableToKeys(keyboard, syllable, options, dict) {
     if (!(sym in keyboard.map)) return null;
     keys += keyboard.map[sym];
   }
+  if (options.dropTones) return keys;
   const tone = toneOf(syllable);
   if (tone === 1) return keys + (options.tone1Space ? keyboard.tone1 : "");
   return keys + keyboard.map[["", "", "ˊ", "ˇ", "ˋ", "˙"][tone]];
@@ -47,7 +48,8 @@ function syllableToKeys(keyboard, syllable, options, dict) {
 
 /**
  * @param {string} text 原文
- * @param {object} options { keyboard, autoOther, tone1Space, pinyinTone, overrides: Map<index, reading> }
+ * @param {object} options { keyboard, autoOther, tone1Space, dropTones, pinyinTone, overrides: Map<index, reading> }
+ *   dropTones：注音不輸出任何聲調鍵（一聲空白、ˊˇˋ˙ 都省略）
  * @param {object|null} dict 注音字典（尚未載入時為 null，漢字會標成未對應）
  * @returns {{ output: string, tokens: Array }}
  */

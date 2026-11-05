@@ -1,7 +1,7 @@
 import { encode } from "./lib/encode.js";
 import { getKeyboard } from "./lib/keyboards.js";
 import { countText } from "./lib/stats.js";
-import { evaluate, entropyLabel } from "./lib/password.js";
+import { evaluate, entropyLabel, CHECKS } from "./lib/password.js";
 import { loadDict, fillKeyboardSelect, copyText, setStatus, renderWithSpaces } from "./shared.js";
 
 const $ = (id) => document.getElementById(id);
@@ -10,6 +10,7 @@ const keyboard = $("keyboard");
 const optAuto = $("opt-auto");
 const optTone1 = $("opt-tone1");
 const optPinyinTone = $("opt-pinyin-tone");
+const optDropTones = $("opt-drop-tones");
 const output = $("output");
 const status = $("encode-status");
 const copyBtn = $("copy");
@@ -28,8 +29,13 @@ fillKeyboardSelect(keyboard);
 
 function syncToggles() {
   const family = getKeyboard(keyboard.value).family;
-  $("row-tone1").hidden = !(family === "zhuyin" || optAuto.checked && family !== "pinyin");
+  const zhuyin = family === "zhuyin" || optAuto.checked && family !== "pinyin";
+  $("row-tone1").hidden = !zhuyin;
+  $("row-drop-tones").hidden = !zhuyin;
   $("row-pinyin").hidden = family !== "pinyin";
+  // 移除聲調鍵時，一聲空白鍵的設定沒有作用。
+  optTone1.disabled = optDropTones.checked;
+  $("row-tone1").classList.toggle("is-disabled", optDropTones.checked);
 }
 
 function renderBreakdown(tokens) {
@@ -69,7 +75,7 @@ function renderBreakdown(tokens) {
     if (t.kind !== "unmapped" && t.kind !== "pending") {
       const keys = document.createElement("span");
       keys.className = "keys";
-      keys.textContent = t.out.replace(/ /g, "␣");
+      renderWithSpaces(keys, t.out);
       li.append(keys);
     }
     return li;
@@ -80,6 +86,27 @@ function renderStats() {
   const target = document.querySelector('input[name="stats-target"]:checked').value;
   const counts = countText(target === "source" ? source.value : current.output);
   for (const dd of document.querySelectorAll("#stats dd")) dd.textContent = String(counts[dd.dataset.key]);
+
+  // 密碼檢核項目拆解：列出已符合的項目，未符合的只彙總成一行。
+  const text = target === "source" ? source.value : current.output;
+  const { checks } = evaluate(text);
+  const passed = text ? checks.filter((c) => c.pass) : [];
+  const failed = text ? checks.filter((c) => !c.pass) : [];
+  $("check-count").textContent = `符合 ${passed.length} / ${CHECKS.length} 項`;
+  const list = $("check-list");
+  if (passed.length) {
+    list.replaceChildren(...passed.map((c) => {
+      const li = document.createElement("li");
+      li.textContent = c.label;
+      return li;
+    }));
+  } else {
+    const li = document.createElement("li");
+    li.className = "empty";
+    li.textContent = text ? "目前沒有符合的項目" : "輸入後列出符合的項目";
+    list.replaceChildren(li);
+  }
+  $("check-missing").textContent = failed.length ? `未符合：${failed.map((c) => c.label).join("、")}` : "";
 }
 
 function renderPassword() {
@@ -140,6 +167,7 @@ function update() {
     keyboard: keyboard.value,
     autoOther: optAuto.checked,
     tone1Space: optTone1.checked,
+    dropTones: optDropTones.checked,
     pinyinTone: optPinyinTone.checked,
     overrides,
   }, dict);
@@ -167,7 +195,7 @@ function update() {
 
 source.addEventListener("input", update);
 keyboard.addEventListener("change", update);
-for (const opt of [optAuto, optTone1, optPinyinTone]) opt.addEventListener("change", update);
+for (const opt of [optAuto, optTone1, optPinyinTone, optDropTones]) opt.addEventListener("change", update);
 for (const radio of document.querySelectorAll('input[name="stats-target"]')) radio.addEventListener("change", renderStats);
 breakdown.addEventListener("change", (event) => {
   const select = event.target.closest("select");
@@ -181,7 +209,7 @@ copyBtn.addEventListener("click", async () => {
     await copyText(current.output);
     setStatus(status, "已複製到剪貼簿。", "ok");
   } catch {
-    setStatus(status, "無法存取剪貼簿，請手動選取結果複製（␣ 代表空白）。", "error");
+    setStatus(status, "無法存取剪貼簿，請手動選取結果複製。", "error");
   }
 });
 

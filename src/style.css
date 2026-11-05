@@ -12,7 +12,7 @@
   --muted: #707486;
   --line: #d4d2cc;
 }
-* { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
@@ -93,6 +93,7 @@ textarea:focus, select:focus, input[type="text"]:focus { outline: 3px solid colo
 .toggle-row i::after { content: ""; width: 16px; height: 16px; position: absolute; left: 2px; top: 2px; background: white; border: 1px solid #aaa8a1; transition: .15s; }
 .toggle-row input:checked + i { background: var(--accent); border-color: var(--accent); }
 .toggle-row input:checked + i::after { transform: translateX(18px); border-color: white; }
+.toggle-row.is-disabled { opacity: .45; cursor: not-allowed; }
 .toggle-row input:focus-visible + i { outline: 3px solid color-mix(in srgb, var(--accent) 30%, transparent); outline-offset: 2px; }
 
 .output-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -103,7 +104,8 @@ textarea:focus, select:focus, input[type="text"]:focus { outline: 3px solid colo
 .result { display: block; min-height: 64px; padding: 14px 16px; color: var(--navy); background: white; border-left: 5px solid var(--accent); font: 700 20px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
 .result.han { font-family: "Noto Sans TC", "PingFang TC", sans-serif; font-size: 22px; }
 .result:empty::before { content: "結果會顯示於此"; color: #9195a1; font: 500 14px/1.5 "Noto Sans TC", sans-serif; }
-.result .space-mark { color: var(--accent); }
+.space-mark { position: relative; white-space: pre; }
+.space-mark::after { content: "␣"; position: absolute; left: 0; right: 0; text-align: center; color: var(--accent); pointer-events: none; user-select: none; }
 .status { margin: 0; min-height: 1.5em; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .status.error { color: var(--red); font-weight: 700; }
 .status.ok { color: var(--green); font-weight: 700; }
@@ -132,6 +134,14 @@ textarea:focus, select:focus, input[type="text"]:focus { outline: 3px solid colo
 .segmented span { display: block; padding: 8px 14px; font-size: 12px; font-weight: 800; cursor: pointer; }
 .segmented input:checked + span { color: white; background: var(--navy); }
 .segmented input:focus-visible + span { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 2px; }
+
+.check-summary { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+.check-chips { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.check-chips li { padding: 6px 10px; color: var(--green); background: #f1f7f4; border: 1px solid #b9d8cb; font-size: 12px; font-weight: 800; }
+.check-chips li::before { content: "✓ "; }
+.check-chips li.empty { color: var(--muted); background: #faf9f5; border-color: var(--line); font-weight: 600; }
+.check-chips li.empty::before { content: ""; }
+#check-missing { margin-top: 10px; }
 
 /* 密碼標準 */
 .meter-head { display: flex; justify-content: space-between; color: #555a6d; font-size: 13px; font-weight: 700; }

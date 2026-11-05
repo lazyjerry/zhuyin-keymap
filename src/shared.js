@@ -46,14 +46,16 @@ export function setStatus(el, message, tone = "") {
   el.className = `status${tone ? ` ${tone}` : ""}`;
 }
 
-/** 把空白以「␣」標示，避免結果中的空白看不見。 */
+/**
+ * 讓結果中的空白看得見：保留真正的空白字元，「␣」只由 CSS 偽元素畫出，
+ * 手動選取複製時拿到的仍是空白。
+ */
 export function renderWithSpaces(el, text) {
-  el.replaceChildren(...Array.from(text).map((ch) => {
-    if (ch !== " ") return document.createTextNode(ch);
+  el.replaceChildren(...text.split(/( )/).filter(Boolean).map((part) => {
+    if (part !== " ") return document.createTextNode(part);
     const mark = document.createElement("span");
     mark.className = "space-mark";
-    mark.textContent = "␣";
-    mark.setAttribute("aria-label", "空白");
+    mark.textContent = " ";
     return mark;
   }));
 }
