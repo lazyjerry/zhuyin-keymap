@@ -74,7 +74,7 @@ h1 em { color: var(--paper); -webkit-text-stroke: 2px var(--navy); text-shadow: 
 /* 表單 */
 .field-label, .panel label.field-label { display: block; color: #555a6d; font-size: 12px; font-weight: 800; letter-spacing: .04em; }
 textarea, select, input[type="text"] { width: 100%; color: var(--navy); background: white; border: 1px solid #bfc0c4; border-radius: 2px; }
-textarea { min-height: 128px; padding: 12px 14px; resize: vertical; line-height: 1.6; }
+textarea { min-height: 76px; padding: 10px 14px; resize: vertical; line-height: 1.6; }
 select { min-height: 46px; padding: 8px 12px; }
 textarea:focus, select:focus, input[type="text"]:focus { outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent); border-color: var(--accent); }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -82,7 +82,7 @@ textarea:focus, select:focus, input[type="text"]:focus { outline: 3px solid colo
 .hint { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
 
-.toggles { display: grid; gap: 12px; margin-top: 6px; }
+.toggles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; margin-top: 6px; }
 .toggle-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; position: relative; cursor: pointer; }
 .toggle-row[hidden] { display: none; }
 .toggle-row strong, .toggle-row small { display: block; }
@@ -190,8 +190,12 @@ footer { max-width: 1152px; margin: 28px auto 32px; padding: 22px 0 0; color: va
 footer a { color: var(--navy); font-weight: 700; }
 footer span { padding: 0 8px; }
 
+@media (max-width: 1100px) {
+  .toggles { grid-template-columns: 1fr; gap: 12px; }
+}
 @media (max-width: 960px) {
   .split { grid-template-columns: 1fr; }
+  .toggles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; }
   .panel + .panel { border-left: 0; border-top: 1px solid var(--line); }
   .layout { grid-template-columns: 1fr; }
 }
@@ -216,6 +220,7 @@ footer span { padding: 0 8px; }
   .split { margin: 0 12px; }
   .panel { padding: 18px 14px; }
   .field-row { grid-template-columns: 1fr; }
+  .toggles { grid-template-columns: 1fr; gap: 12px; }
   .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stat dd { font-size: 22px; }
   .result { font-size: 17px; }

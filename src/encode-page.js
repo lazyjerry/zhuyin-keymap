@@ -11,6 +11,7 @@ const optAuto = $("opt-auto");
 const optTone1 = $("opt-tone1");
 const optPinyinTone = $("opt-pinyin-tone");
 const optDropTones = $("opt-drop-tones");
+const optCapitalize = $("opt-capitalize");
 const output = $("output");
 const status = $("encode-status");
 const copyBtn = $("copy");
@@ -33,6 +34,7 @@ function syncToggles() {
   $("row-tone1").hidden = !zhuyin;
   $("row-drop-tones").hidden = !zhuyin;
   $("row-pinyin").hidden = family !== "pinyin";
+  $("row-capitalize").hidden = !(family === "zhuyin" || family === "pinyin" || optAuto.checked);
   // 移除聲調鍵時，一聲空白鍵的設定沒有作用。
   optTone1.disabled = optDropTones.checked;
   $("row-tone1").classList.toggle("is-disabled", optDropTones.checked);
@@ -168,6 +170,7 @@ function update() {
     autoOther: optAuto.checked,
     tone1Space: optTone1.checked,
     dropTones: optDropTones.checked,
+    capitalize: optCapitalize.checked,
     pinyinTone: optPinyinTone.checked,
     overrides,
   }, dict);
@@ -195,7 +198,7 @@ function update() {
 
 source.addEventListener("input", update);
 keyboard.addEventListener("change", update);
-for (const opt of [optAuto, optTone1, optPinyinTone, optDropTones]) opt.addEventListener("change", update);
+for (const opt of [optAuto, optTone1, optPinyinTone, optDropTones, optCapitalize]) opt.addEventListener("change", update);
 for (const radio of document.querySelectorAll('input[name="stats-target"]')) radio.addEventListener("change", renderStats);
 breakdown.addEventListener("change", (event) => {
   const select = event.target.closest("select");

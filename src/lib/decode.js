@@ -26,11 +26,11 @@ export const TARGETS = {
 
 const LITERAL_PENALTY = -60;
 
-function zhuyinLattice(dict, keyboard, input, toneless) {
+function zhuyinLattice(dict, keyboard, input, toneless, capsAsKeys) {
   const keyToSym = invert(keyboard.map);
   const tokens = Array.from(input).map((ch) => {
     if (ch === " ") return { ch, type: "space" };
-    const sym = keyToSym[ch];
+    const sym = keyToSym[ch] ?? (capsAsKeys && /[A-Z]/.test(ch) ? keyToSym[ch.toLowerCase()] : undefined);
     if (!sym) return { ch, type: "literal" };
     return { ch, sym, type: /[ˊˇˋ˙]/.test(sym) ? "tone" : "bpmf" };
   });
@@ -164,12 +164,13 @@ function decodeGreek(input) {
  * @returns {{ output: string, segments: Array|null }}
  * segments 只有中文類鍵盤會提供，供使用者挑選同音候選字。
  * toneless：注音按鍵已移除聲調，沒有聲調鍵的音節以所有聲調比對。
+ * capsAsKeys：注音按鍵含字首大寫，大寫英文字母視同小寫按鍵；關閉時大寫字母原樣保留。
  */
-export function decode(input, { keyboard, target, toneless = false, choices = new Map() }, dict) {
+export function decode(input, { keyboard, target, toneless = false, capsAsKeys = false, choices = new Map() }, dict) {
   const kb = getKeyboard(keyboard);
   if (kb.family === "zhuyin" || kb.family === "pinyin") {
     if (!dict) return { output: "", segments: null, pending: true };
-    const { size, lattice, literalAt } = kb.family === "zhuyin" ? zhuyinLattice(dict, kb, input, toneless) : pinyinLattice(dict, input);
+    const { size, lattice, literalAt } = kb.family === "zhuyin" ? zhuyinLattice(dict, kb, input, toneless, capsAsKeys) : pinyinLattice(dict, input);
     const segments = decodeLattice(dict, size, lattice, literalAt);
     return { output: renderChinese(dict, segments, target, choices), segments };
   }

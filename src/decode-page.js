@@ -11,6 +11,7 @@ const status = $("decode-status");
 const copyBtn = $("copy");
 const candidates = $("candidates");
 const optToneless = $("opt-toneless");
+const optCaps = $("opt-caps");
 
 const ROWS = ["`1234567890-=", "qwertyuiop[]", "asdfghjkl;'", "zxcvbnm,./"];
 const NOTES = {
@@ -109,11 +110,12 @@ function hasToneKeys(text) {
 }
 
 function update() {
-  const key = `${keys.value}\u0000${keyboard.value}\u0000${optToneless.checked}`;
+  const key = `${keys.value}\u0000${keyboard.value}\u0000${optToneless.checked}\u0000${optCaps.checked}`;
   if (key !== lastKey) { choices = new Map(); lastKey = key; }
   const family = getKeyboard(keyboard.value).family;
   $("row-toneless").hidden = family !== "zhuyin";
-  result = decode(keys.value, { keyboard: keyboard.value, target: target.value, toneless: optToneless.checked, choices }, dict);
+  $("row-caps").hidden = family !== "zhuyin";
+  result = decode(keys.value, { keyboard: keyboard.value, target: target.value, toneless: optToneless.checked, capsAsKeys: optCaps.checked, choices }, dict);
   output.textContent = result.output;
   output.classList.toggle("han", target.value === "han" || target.value === "hangul" || target.value === "text");
   copyBtn.disabled = result.output.length === 0;
@@ -122,6 +124,8 @@ function update() {
     setStatus(status, dictError ? `${dictError}` : "注音字典載入中，稍後自動解碼…", dictError ? "error" : "");
   } else if (result.segments?.some((s) => s.kind === "bpmf")) {
     setStatus(status, "部分注音找不到對應的字，已以注音符號顯示。請確認鍵盤配置是否正確。", "error");
+  } else if (result.output && family === "zhuyin" && !optCaps.checked && /[A-Z]/.test(keys.value) && /[a-z0-9]/.test(keys.value)) {
+    setStatus(status, "按鍵混有大寫字母，目前原樣保留；若是字首大寫產生的密碼，請開啟「按鍵含字首大寫」。");
   } else if (result.output && family === "zhuyin" && !optToneless.checked && !hasToneKeys(keys.value)
     && (result.segments ?? []).filter((s) => s.kind !== "literal").length > 0) {
     setStatus(status, "按鍵裡沒有任何聲調鍵或空白；若是移除聲調後的密碼，請開啟「按鍵已移除聲調」。");
@@ -137,6 +141,7 @@ keys.addEventListener("input", update);
 keyboard.addEventListener("change", () => { fillTargets(); renderChart(); update(); });
 target.addEventListener("change", update);
 optToneless.addEventListener("change", update);
+optCaps.addEventListener("change", update);
 candidates.addEventListener("change", (event) => {
   const select = event.target.closest("select");
   if (!select) return;

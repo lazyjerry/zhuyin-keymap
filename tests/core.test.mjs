@@ -92,3 +92,14 @@ test("移除聲調：正向不輸出聲調鍵、反向以所有聲調比對", ()
     assert.equal(dec(enc(text, { dropTones: true }), { toneless: true }), text);
   }
 });
+
+test("字首大寫：正向每字首鍵大寫、反向大寫視同按鍵", () => {
+  assert.equal(enc("太難了", { capitalize: true }), "W94S06Xk7");
+  assert.equal(enc("台灣", { capitalize: true, keyboard: "pinyin" }), "TaiWan");
+  assert.equal(enc("安녕", { capitalize: true }), "0 sud");
+  assert.equal(dec("W94S06Xk7", { capsAsKeys: true }), "太難了");
+  assert.equal(dec("TaiWan", { keyboard: "pinyin" }), "台灣");
+  for (const text of ["今天天氣很好", "資訊安全很重要"]) {
+    assert.equal(dec(enc(text, { capitalize: true }), { capsAsKeys: true }), text);
+  }
+});

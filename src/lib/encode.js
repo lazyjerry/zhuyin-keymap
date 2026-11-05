@@ -50,6 +50,7 @@ function syllableToKeys(keyboard, syllable, options, dict) {
  * @param {string} text 原文
  * @param {object} options { keyboard, autoOther, tone1Space, dropTones, pinyinTone, overrides: Map<index, reading> }
  *   dropTones：注音不輸出任何聲調鍵（一聲空白、ˊˇˋ˙ 都省略）
+ *   capitalize：每個漢字的第一個按鍵若為英文字母則改大寫，例如「太難了」→ W94S06Xk7
  * @param {object|null} dict 注音字典（尚未載入時為 null，漢字會標成未對應）
  * @returns {{ output: string, tokens: Array }}
  */
@@ -69,7 +70,8 @@ export function encode(text, options, dict) {
       if (!dict) return { src: ch, out: ch, kind: "pending", index };
       if (!info?.readings.length) return { src: ch, out: ch, kind: "unmapped", index };
       const reading = overrides.get(index) ?? info.reading;
-      const out = syllableToKeys(chinese, reading, options, dict);
+      let out = syllableToKeys(chinese, reading, options, dict);
+      if (out !== null && options.capitalize) out = out.replace(/^[a-z]/, (c) => c.toUpperCase());
       if (out === null) return { src: ch, out: ch, kind: "unmapped", index };
       return { src: ch, out, kind: "han", reading, readings: info.readings, index };
     }

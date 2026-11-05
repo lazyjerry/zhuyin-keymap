@@ -37,15 +37,19 @@
         <div class="panel">
           <label class="field-label" for="keys">英文按鍵</label>
           <textarea id="keys" class="mono" maxlength="1000" placeholder="例如：ji394w96j0 （我愛台灣）" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="keys-hint"></textarea>
-          <p class="hint" id="keys-hint">最多 1000 字元。注音的一聲可帶或不帶空白；大寫英文與無法對應的按鍵會原樣保留。</p>
+          <p class="hint" id="keys-hint">最多 1000 字元。注音的一聲可帶或不帶空白；無法對應的按鍵會原樣保留。</p>
           <div class="field-row">
             <div><label class="field-label" for="keyboard">鍵盤配置</label><select id="keyboard"></select></div>
             <div><label class="field-label" for="target">編譯目標</label><select id="target"></select></div>
           </div>
           <div class="toggles">
             <label class="toggle-row" id="row-toneless">
-              <span><strong>按鍵已移除聲調</strong><small>沒有聲調鍵的音節以所有聲調比對，例如 ji9su →「我愛你」</small></span>
+              <span><strong>按鍵已移除聲調</strong><small>ji9su →「我愛你」</small></span>
               <input type="checkbox" id="opt-toneless"><i aria-hidden="true"></i>
+            </label>
+            <label class="toggle-row" id="row-caps">
+              <span><strong>按鍵含字首大寫</strong><small>W94S06Xk7 →「太難了」</small></span>
+              <input type="checkbox" id="opt-caps" checked><i aria-hidden="true"></i>
             </label>
           </div>
         </div>
